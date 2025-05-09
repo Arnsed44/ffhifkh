@@ -759,4 +759,503 @@ local ghostDropdown, ghostSelected = createDropdown(
             
             -- Evidence items
             for _, evidence in ipairs(GHOST_DATA[selected].evidence) do
-                local evidenceItem = Instance.new("TextLabel", ghostInfoGUI.MainFrame
+                local evidenceItem = Instance.new("TextLabel", ghostInfoGUI.MainFrame)
+                evidenceItem.Size = UDim2.new(1, -40, 0, 20)
+                evidenceItem.Position = UDim2.new(0, 25, 0, infoYPos)
+                evidenceItem.BackgroundTransparency = 1
+                evidenceItem.TextColor3 = Color3.fromRGB(255, 255, 255)
+                evidenceItem.Font = Enum.Font.Gotham
+                evidenceItem.TextSize = 14
+                evidenceItem.Text = "â€¢ " .. evidence
+                evidenceItem.TextXAlignment = Enum.TextXAlignment.Left
+                evidenceItem.Name = "GhostInfo"
+                infoYPos += 20
+            end
+            
+            infoYPos += 15
+            
+            -- Behaviors header
+            local behaviorHeader = Instance.new("TextLabel", ghostInfoGUI.MainFrame)
+            behaviorHeader.Size = UDim2.new(1, -30, 0, 20)
+            behaviorHeader.Position = UDim2.new(0, 15, 0, infoYPos)
+            behaviorHeader.BackgroundTransparency = 1
+            behaviorHeader.TextColor3 = Color3.fromRGB(255, 200, 0)
+            behaviorHeader.Font = Enum.Font.GothamBold
+            behaviorHeader.TextSize = 16
+            behaviorHeader.Text = "Behaviors:"
+            behaviorHeader.TextXAlignment = Enum.TextXAlignment.Left
+            behaviorHeader.Name = "GhostInfo"
+            infoYPos += 25
+            
+            -- Behavior items
+            for _, behavior in ipairs(GHOST_DATA[selected].behaviors) do
+                local behaviorItem = Instance.new("TextLabel", ghostInfoGUI.MainFrame)
+                behaviorItem.Size = UDim2.new(1, -40, 0, 40)
+                behaviorItem.Position = UDim2.new(0, 25, 0, infoYPos)
+                behaviorItem.BackgroundTransparency = 1
+                behaviorItem.TextColor3 = Color3.fromRGB(255, 255, 255)
+                behaviorItem.Font = Enum.Font.Gotham
+                behaviorItem.TextSize = 14
+                behaviorItem.Text = "â€¢ " .. behavior
+                behaviorItem.TextXAlignment = Enum.TextXAlignment.Left
+                behaviorItem.TextWrapped = true
+                behaviorItem.Name = "GhostInfo"
+                infoYPos += 45
+            end
+            
+            -- Resize the frame to fit all content
+            ghostInfoGUI.MainFrame.Size = UDim2.new(0, 300, 0, infoYPos + 10)
+        end
+    end
+)
+
+-- Minimize Button Functions
+local function setupMinimizeFunction(gui, title, minimizeBtn)
+    local minimized = false
+    local originalSize = gui.MainFrame.Size
+    local minimizedSize = UDim2.new(0, originalSize.X.Offset, 0, 40)
+    
+    minimizeBtn.MouseButton1Click:Connect(function()
+        minimized = not minimized
+        minimizeBtn.Text = minimized and "+" or "-"
+        
+        if minimized then
+            TweenService:Create(gui.MainFrame, TweenInfo.new(0.3), {
+                Size = minimizedSize
+            }):Play()
+            
+            -- Hide all children except title and this button
+            for _, child in ipairs(gui.MainFrame:GetChildren()) do
+                if child ~= title and child ~= minimizeBtn and child ~= gui.Stroke then
+                    child.Visible = false
+                end
+            end
+        else
+            TweenService:Create(gui.MainFrame, TweenInfo.new(0.3), {
+                Size = originalSize
+            }):Play()
+            
+            -- Show all children
+            task.wait(0.1)
+            for _, child in ipairs(gui.MainFrame:GetChildren()) do
+                if child ~= title and child ~= minimizeBtn and child ~= gui.Stroke then
+                    child.Visible = true
+                end
+            end
+        end
+    end)
+end
+
+-- Setup minimize buttons for all GUIs
+setupMinimizeFunction(ghostStats, statsTitle, statsMinimize)
+setupMinimizeFunction(buttonToggles, buttonsTitle, buttonsMinimize)
+setupMinimizeFunction(equipmentGUI, equipTitle, equipMinimize)
+setupMinimizeFunction(evidenceGUI, evidenceTitle, evidenceMinimize)
+setupMinimizeFunction(ghostInfoGUI, ghostInfoTitle, ghostInfoMinimize)
+
+-- ESP Function
+local function createESP(player)
+    local highlightClone = Instance.new("Highlight")
+    highlightClone.Name = "PlayerESP"
+    highlightClone.FillColor = Color3.fromRGB(0, 255, 0)
+    highlightClone.OutlineColor = Color3.fromRGB(0, 255, 0)
+    highlightClone.FillTransparency = 0.5
+    highlightClone.OutlineTransparency = 0
+    highlightClone.Adornee = player.Character
+    highlightClone.Parent = player.Character
+    
+    return highlightClone
+end
+
+-- Evil Tags Function
+local function createEvilTag(character)
+    local evl = Instance.new("Highlight")
+    evl.Name = "EvilTag"
+    evl.FillColor = Color3.fromRGB(255, 0, 0)
+    evl.OutlineColor = Color3.fromRGB(255, 0, 0)
+    evl.FillTransparency = 0.5
+    evl.OutlineTransparency = 0
+    evl.Adornee = character
+    evl.Parent = character
+    
+    local billboardGui = Instance.new("BillboardGui")
+    billboardGui.Name = "EvilTagLabel"
+    billboardGui.Size = UDim2.new(0, 100, 0, 40)
+    billboardGui.StudsOffset = Vector3.new(0, 3, 0)
+    billboardGui.AlwaysOnTop = true
+    billboardGui.Parent = character
+    
+    local label = Instance.new("TextLabel", billboardGui)
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = "GHOST"
+    label.TextColor3 = Color3.fromRGB(255, 0, 0)
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 20
+    label.TextStrokeTransparency = 0
+    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    
+    createRainbowEffect(label, "TextColor3")
+    
+    return evl, billboardGui
+end
+
+-- Fullbright Function
+local function setFullbright(enabled)
+    if enabled then
+        -- Save current lighting properties
+        oldLightingProps = {
+            Brightness = Lighting.Brightness,
+            ClockTime = Lighting.ClockTime,
+            FogEnd = Lighting.FogEnd,
+            GlobalShadows = Lighting.GlobalShadows,
+            Ambient = Lighting.Ambient
+        }
+        
+        -- Set fullbright
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.FogEnd = 100000
+        Lighting.GlobalShadows = false
+        Lighting.Ambient = Color3.fromRGB(178, 178, 178)
+    else
+        -- Restore lighting properties
+        Lighting.Brightness = oldLightingProps.Brightness
+        Lighting.ClockTime = oldLightingProps.ClockTime
+        Lighting.FogEnd = oldLightingProps.FogEnd
+        Lighting.GlobalShadows = oldLightingProps.GlobalShadows
+        Lighting.Ambient = oldLightingProps.Ambient
+    end
+end
+
+-- Equipment GUI Toggle
+showEquipmentBtn.MouseButton1Click:Connect(function()
+    equipmentGUI.ScreenGui.Enabled = not equipmentGUI.ScreenGui.Enabled
+    
+    if equipmentGUI.ScreenGui.Enabled then
+        equipmentGUI.MainFrame.Size = UDim2.new(0, 220, 0, equipYOffset + 10)
+        
+        for _, item in ipairs(equipLabels) do
+            item.box.Visible = true
+            item.label.Visible = true
+        end
+    end
+    
+    showEquipmentBtn.Text = "Equipment GUI: " .. (equipmentGUI.ScreenGui.Enabled and "ON" or "OFF")
+end)
+
+-- Ghost Info GUI Toggle
+local ghostInfoBtn = createToggleButton(
+    buttonToggles.MainFrame, 
+    "Ghost Info GUI", 
+    UDim2.new(0.5, -100, 0, buttonYPos)
+)
+table.insert(buttons, ghostInfoBtn)
+
+ghostInfoBtn.MouseButton1Click:Connect(function()
+    ghostInfoGUI.ScreenGui.Enabled = not ghostInfoGUI.ScreenGui.Enabled
+    ghostInfoBtn.Text = "Ghost Info GUI: " .. (ghostInfoGUI.ScreenGui.Enabled and "ON" or "OFF")
+end)
+
+-- Show/Hide Stats
+statsMinimize.MouseButton1Click:Connect(function()
+    local minimized = ghostStats.MainFrame.Size.Y.Offset <= 45
+    
+    for statName, label in pairs(labels) do
+        label.Visible = not minimized
+    end
+    
+    ghostStats.MainFrame.Size = minimized 
+        and UDim2.new(0, 320, 0, yOffset) 
+        or UDim2.new(0, 320, 0, 40)
+end)
+
+-- Show/Hide Evidence
+evidenceMinimize.MouseButton1Click:Connect(function()
+    local minimized = evidenceGUI.MainFrame.Size.Y.Offset <= 45
+    
+    for _, evidence in ipairs(evidenceChecks) do
+        evidence.box.Visible = not minimized
+        evidence.label.Visible = not minimized
+    end
+    
+    evidenceGUI.MainFrame.Size = minimized 
+        and UDim2.new(0, 240, 0, evidenceYOffset) 
+        or UDim2.new(0, 240, 0, 40)
+end)
+
+-- Game Logic Connections
+-- Find ghost parts
+local function findGhostModel()
+    for _, model in ipairs(Workspace:GetChildren()) do
+        if model:IsA("Model") and (model.Name:find("Ghost") or model.Name:find("Evil")) then
+            return model
+        end
+    end
+    
+    return nil
+end
+
+-- ESP Update Loop
+task.spawn(function()
+    local playerESP = {}
+    
+    while true do
+        task.wait(0.5)
+        
+        local espEnabled = getEspState()
+        local evilTagsEnabled = getEvilTagsState()
+        
+        -- Player ESP
+        if espEnabled then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    if not playerESP[player.Name] then
+                        playerESP[player.Name] = createESP(player)
+                    end
+                end
+            end
+        else
+            for playerName, esp in pairs(playerESP) do
+                esp:Destroy()
+                playerESP[playerName] = nil
+            end
+        end
+        
+        -- Evil Tags (Ghost Highlighting)
+        if evilTagsEnabled then
+            local ghostModel = findGhostModel()
+            if ghostModel and not ghostModel:FindFirstChild("EvilTag") then
+                createEvilTag(ghostModel)
+            end
+        else
+            for _, model in ipairs(Workspace:GetChildren()) do
+                if model:IsA("Model") then
+                    local evilTag = model:FindFirstChild("EvilTag")
+                    local evilLabel = model:FindFirstChild("EvilTagLabel")
+                    
+                    if evilTag then evilTag:Destroy() end
+                    if evilLabel then evilLabel:Destroy() end
+                end
+            end
+        end
+        
+        -- Fullbright
+        setFullbright(getFullbrightState())
+        
+        -- Update Ghost Stats
+        local ghostModel = findGhostModel()
+        if ghostModel then
+            local ghostNode
+            
+            -- Look for a ghost node in ReplicatedStorage
+            for _, node in ipairs(ReplicatedStorage:GetDescendants()) do
+                if node:IsA("ModuleScript") and node.Name:find("Ghost") then
+                    ghostNode = node
+                    break
+                end
+            end
+            
+            -- Update ghost info if possible
+            if ghostNode then
+                -- This is placeholder logic since we don't know the actual game's structure
+                -- In a real implementation, you'd need to access the ghost data from the game
+                labels["Gender"].Text = "Gender: Unknown"
+                labels["Favorite Room"].Text = "Favorite Room: Unknown"
+                labels["Current Room"].Text = "Current Room: Unknown"
+                labels["Current Temp"].Text = "Current Temp: Unknown"
+                labels["Favorite Temp"].Text = "Favorite Temp: Unknown"
+            end
+        end
+    end
+end)
+
+-- Hunt TP Logic (teleport to safe spot during ghost hunts)
+local safePosition = Vector3.new(0, 100, 0) -- This should be set to a known safe position
+
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        
+        if getHuntTpState() then
+            -- Check for hunt indicators (game-specific)
+            local isHunting = false
+            
+            -- This is placeholder logic
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("Sound") and obj.Playing and obj.Name:find("Hunt") then
+                    isHunting = true
+                    break
+                end
+            end
+            
+            if isHunting and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                -- Teleport to safe position
+                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(safePosition)
+            end
+        end
+    end
+end)
+
+-- Auto Equipment Logic
+autoEquipBtn.MouseButton1Click:Connect(function()
+    local state = not autoEquipBtn.Text:find("ON")
+    autoEquipBtn.Text = "Pickup & Drop Items: " .. (state and "ON" or "OFF")
+    
+    if state then
+        -- Auto collect all items in range
+        local itemsCollected = 0
+        
+        for _, item in ipairs(Workspace:GetDescendants()) do
+            if item:IsA("Tool") and item:FindFirstChild("Handle") then
+                local distance = (LocalPlayer.Character.HumanoidRootPart.Position - item.Handle.Position).Magnitude
+                
+                if distance < 10 then
+                    item.Parent = LocalPlayer.Backpack
+                    itemsCollected += 1
+                end
+            end
+        end
+        
+        -- Notify
+        if itemsCollected > 0 then
+            local notification = Instance.new("TextLabel")
+            notification.Size = UDim2.new(0, 200, 0, 50)
+            notification.Position = UDim2.new(0.5, -100, 0.8, 0)
+            notification.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            notification.BackgroundTransparency = 0.5
+            notification.TextColor3 = Color3.fromRGB(255, 255, 255)
+            notification.Text = "Collected " .. itemsCollected .. " items"
+            notification.Font = Enum.Font.GothamBold
+            notification.TextSize = 18
+            notification.Parent = CoreGui
+            createCorner(notification, 8)
+            
+            game:GetService("Debris"):AddItem(notification, 3)
+        end
+    end
+end)
+
+-- Ghost Detection Logic  
+ghostDetectorBtn.MouseButton1Click:Connect(function()
+    local state = not ghostDetectorBtn.Text:find("ON")
+    ghostDetectorBtn.Text = "Ghost Detector: " .. (state and "ON" or "OFF")
+    
+    if state then
+        -- Create arrow pointing to ghost
+        local arrow = Instance.new("ImageLabel", CoreGui)
+        arrow.Size = UDim2.new(0, 50, 0, 50)
+        arrow.Position = UDim2.new(0.5, -25, 0.5, -25)
+        arrow.BackgroundTransparency = 1
+        arrow.Image = "rbxassetid://7734010488" -- Arrow image ID
+        arrow.ImageColor3 = Color3.fromRGB(255, 0, 0)
+        arrow.Name = "GhostDetectorArrow"
+        
+        createRainbowEffect(arrow, "ImageColor3")
+        
+        -- Arrow update loop
+        task.spawn(function()
+            while ghostDetectorBtn.Text:find("ON") and arrow and arrow.Parent do
+                task.wait(0.1)
+                
+                local ghostModel = findGhostModel()
+                if ghostModel and ghostModel:FindFirstChild("HumanoidRootPart") and 
+                   LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    
+                    -- Calculate direction
+                    local ghostPos = ghostModel.HumanoidRootPart.Position
+                    local playerPos = LocalPlayer.Character.HumanoidRootPart.Position
+                    local direction = (ghostPos - playerPos).Unit
+                    
+                    -- Calculate angle
+                    local lookvector = LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector
+                    local angle = math.atan2(direction.X, direction.Z) - math.atan2(lookvector.X, lookvector.Z)
+                    
+                    -- Update arrow rotation
+                    arrow.Rotation = math.deg(angle)
+                    
+                    -- Update distance indicator
+                    local distance = (ghostPos - playerPos).Magnitude
+                    
+                    -- Change color based on distance
+                    local distanceColor
+                    if distance < 10 then
+                        distanceColor = Color3.fromRGB(255, 0, 0) -- Red (close)
+                    elseif distance < 30 then
+                        distanceColor = Color3.fromRGB(255, 255, 0) -- Yellow (medium)
+                    else
+                        distanceColor = Color3.fromRGB(0, 255, 0) -- Green (far)
+                    end
+                    
+                    arrow.ImageColor3 = distanceColor
+                end
+            end
+            
+            if arrow and arrow.Parent then
+                arrow:Destroy()
+            end
+        end)
+    else
+        -- Remove ghost detector arrow
+        for _, item in ipairs(CoreGui:GetChildren()) do
+            if item.Name == "GhostDetectorArrow" then
+                item:Destroy()
+            end
+        end
+    end
+end)
+
+-- Initialize all GUI sizes
+ghostStats.MainFrame.Size = UDim2.new(0, 320, 0, yOffset)
+evidenceGUI.MainFrame.Size = UDim2.new(0, 240, 0, evidenceYOffset)
+equipmentGUI.MainFrame.Size = UDim2.new(0, 220, 0, equipYOffset + 10)
+
+-- Show all elements initially
+for statName, label in pairs(labels) do
+    label.Visible = true
+end
+
+for _, evidence in ipairs(evidenceChecks) do
+    evidence.box.Visible = true
+    evidence.label.Visible = true
+end
+
+for _, equipment in ipairs(equipLabels) do
+    equipment.box.Visible = true
+    equipment.label.Visible = true
+end
+
+-- Initial notification
+local startNotification = Instance.new("TextLabel", CoreGui)
+startNotification.Size = UDim2.new(0, 300, 0, 60)
+startNotification.Position = UDim2.new(0.5, -150, 0.2, 0)
+startNotification.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+startNotification.BackgroundTransparency = 0.5
+startNotification.TextColor3 = Color3.fromRGB(255, 255, 255)
+startNotification.Text = "Ghost Hunter Loaded!\nUse the GUI to track evidence and find ghosts."
+startNotification.Font = Enum.Font.GothamBold
+startNotification.TextSize = 16
+startNotification.TextWrapped = true
+createCorner(startNotification, 10)
+createStrokeWithRainbow(startNotification)
+
+-- Auto-remove notification
+task.delay(5, function()
+    TweenService:Create(startNotification, TweenInfo.new(1), {
+        BackgroundTransparency = 1,
+        TextTransparency = 1
+    }):Play()
+    
+    task.delay(1, function()
+        startNotification:Destroy()
+    end)
+end)
+
+-- Return the main GUI handles for potential future use
+return {
+    GhostStats = ghostStats,
+    ButtonToggles = buttonToggles,
+    EquipmentGUI = equipmentGUI,
+    EvidenceGUI = evidenceGUI,
+    GhostInfoGUI = ghostInfoGUI
+}
